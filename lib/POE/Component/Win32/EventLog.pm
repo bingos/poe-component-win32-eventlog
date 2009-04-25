@@ -16,7 +16,7 @@ use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.22';
+$VERSION = '1.24';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -371,7 +371,7 @@ Consult the L<Win32::EventLog> documentation for more details.
 
 =over
 
-=item spawn
+=item C<spawn>
 
 Takes a number of arguments, all of which are optional. 
 
@@ -389,24 +389,24 @@ Takes a number of arguments, all of which are optional.
 
 =over
 
-=item session_id
+=item C<session_id>
 
 Takes no arguments. Returns the ID of the component's session. Ideal for posting
 events to the component.
 
-=item yield
+=item C<yield>
 
 This method provides an alternative object based means of posting events to the component.
 First argument is the event to post, following arguments are sent as arguments to the resultant
 post.
 
-=item call
+=item c<call>
 
 This method provides an alternative object based means of calling events to the component.
 First argument is the event to call, following arguments are sent as arguments to the resultant
 call.
 
-=item shutdown
+=item C<shutdown>
 
 Terminates the component instance.
 
@@ -421,31 +421,31 @@ You may pass arbitary key/values in the hashref, please ensure that the keys beg
 
 =over
 
-=item backup
+=item C<backup>
 
 Backs up the eventlog. You must specify a filename in 'args' arrayref.
 
-=item clear
+=item C<clear>
 
 Clears the eventlog.
 
-=item getnumber
+=item C<getnumber>
 
 Returns the number of EventLog records in the EventLog.
 
-=item getoldest
+=item C<getoldest>
 
 Returns the number of the oldest EventLog record in the EventLog.
 
-=item read
+=item C<read>
 
 Returns the indicated eventlog record from the eventlog. 
 
-=item report
+=item C<report>
 
 Generates an EventLog entry. You must specify a hashref representing the record to be added, using 'args'.
 
-=item shutdown
+=item C<shutdown>
 
 Terminates the component instance.
 
@@ -457,13 +457,13 @@ For each requested operation an event handler is required. ARG0 of this event ha
 
 =over
 
-=item result
+=item C<result>
 
 For most cases this will be just a true value. For 'getnumber' and 'getoldest' it will be an integer.
 For 'read', it will be a hashref representing the eventlog record ( see L<Win32::EventLog> for
 details ( the component automagically resolves the User field from a SID to a 'proper' username ).
 
-=item error
+=item C<error>
 
 In the event of an error occurring this will be defined. It is an arrayref which contains the error code and the formatted error relating to that code.
 
@@ -479,7 +479,7 @@ Chris 'BinGOs' Williams
 
 =head1 LICENSE
 
-Copyright C<(c)> Chris Williams.
+Copyright E<copy> Chris Williams.
 
 This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
