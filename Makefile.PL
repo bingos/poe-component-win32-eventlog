@@ -10,4 +10,5 @@ requires 'Carp' => 0;
 requires 'Win32' => 0;
 requires 'Win32::EventLog' => 0;
 requires 'POE' => 0.38;
+no_index directory => 'mylib';
 WriteAll();

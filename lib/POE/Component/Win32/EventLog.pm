@@ -16,7 +16,7 @@ use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.14';
+$VERSION = '1.16';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
