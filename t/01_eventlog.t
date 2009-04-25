@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use Test::More tests => 3;
 use POE qw(Component::Win32::EventLog);
 use Win32::EventLog;
