@@ -1,7 +1,10 @@
 lib/POE/Component/Win32/EventLog.pm
 t/1.t
+t/2.t
+t/3.t
 examples/simple.pl
 MANIFEST
 Makefile.PL
 README
+Changes
 META.yml                                 Module meta-data (added by MakeMaker)

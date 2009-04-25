@@ -16,7 +16,7 @@ use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.05';
+$VERSION = '1.06';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -35,8 +35,8 @@ sub spawn {
   $self->{session_id} = POE::Session->create(
 	  object_states => [
 	  	$self => { 'shutdown' => '_shutdown',
-			   map { ( $_ => 'cmd_handler' ) } keys %functions },
-	  	$self => [ qw(_start child_closed child_error child_stderr child_stdout flush_queue _sig_chld) ],
+			   map { ( $_ => '_cmd_handler' ) } keys %functions },
+	  	$self => [ qw(_start child_closed child_error child_stderr child_stdout _flush_queue _sig_chld) ],
 	  ],
 	  ( ( defined ( $options ) and ref ( $options ) eq 'HASH' ) ? ( options => $options ) : () ),
   )->ID();
@@ -72,7 +72,7 @@ sub _start {
   $kernel->sig( 'CHLD' => '_sig_chld' );
 
   $self->{wheel} = POE::Wheel::Run->new(
-	Program     => \&subprocess,
+	Program     => \&_subprocess,
 	ProgramArgs => [ $self->{source}, $self->{system}, $self->{dontresolveuser} ],
 	CloseOnCall => 0,
     	ErrorEvent  => 'child_error',             # Event to emit on errors.
@@ -91,7 +91,7 @@ sub _start {
   undef;
 }
 
-sub cmd_handler {
+sub _cmd_handler {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   my $sender = $_[SENDER]->ID();
   my $func = $functions{ $_[STATE] };
@@ -178,12 +178,12 @@ sub child_stdout {
     $kernel->refcount_decrement( $session => __PACKAGE__ );
   } else {
     $self->{queuing} = 0;
-    $kernel->yield( 'flush_queue' );
+    $kernel->yield( '_flush_queue' );
   }
   undef;  
 }
 
-sub flush_queue {
+sub _flush_queue {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
 
   while ( my $args = shift @{ $self->{request_queue} } ) {
@@ -210,7 +210,7 @@ sub _shutdown {
   undef;
 }
 
-sub subprocess {
+sub _subprocess {
   binmode(STDIN); binmode(STDOUT); 
   my ($source,$system,$dontresolveuser) = splice @_, 0, 3;
   my $raw;
@@ -236,7 +236,7 @@ sub subprocess {
 		if ( $handle->$func($scalar) ) {
 		   $req->{result} = $scalar;
 		} else {
-		   $req->{error} = &error_codes;
+		   $req->{error} = &_error_codes;
 		}
 		last SWITCH;
 	}
@@ -244,7 +244,7 @@ sub subprocess {
 		if ( my $result = $handle->$func( @{ $req->{args} } ) ) {
 			$req->{result} = $result;
 		} else {
-		   $req->{error} = &error_codes;
+		   $req->{error} = &_error_codes;
 		}
 		last SWITCH;
 	}
@@ -253,10 +253,10 @@ sub subprocess {
 		if ( my $result = $handle->$func( @{ $req->{args} }, $hashref ) ) {
 			$req->{result} = $hashref;
 			unless ( $dontresolveuser ) {
-			  $req->{result}->{User} = lookupaccountsid( $req->{result}->{User} );
+			  $req->{result}->{User} = _lookupaccountsid( $req->{result}->{User} );
 			}
 		} else {
-		   $req->{error} = &error_codes;
+		   $req->{error} = &_error_codes;
 		}
 		last SWITCH;
 	}
@@ -264,7 +264,7 @@ sub subprocess {
 		if ( my $result = $handle->$func( @{ $req->{args} } ) ) {
 			$req->{result} = $result;
 		} else {
-		   $req->{error} = &error_codes;
+		   $req->{error} = &_error_codes;
 		}
 		last SWITCH;
 	}
@@ -275,12 +275,12 @@ sub subprocess {
   }
 }
 
-sub error_codes {
+sub _error_codes {
   my $error = Win32::GetLastError();
   return [ $error, Win32::FormatMessage($error) ];
 }
 
-sub lookupaccountsid {
+sub _lookupaccountsid {
   my $sid = shift || return '';
 
   return $sid unless $sid;
@@ -371,6 +371,8 @@ Consult the L<Win32::EventLog> documentation for more details.
 
 =head1 CONSTRUCTOR
 
+=over
+
 =item spawn
 
 Takes a number of arguments, all of which are optional. 
@@ -382,6 +384,8 @@ Takes a number of arguments, all of which are optional.
   'options', a hashref of POE::Session options that are passed to the component's session creator.
   'dontresolveuser', set to 1 to stop the component automagically resolving the User field from a SID 
   	to a 'proper' username. 
+
+=back
 
 =head1 METHODS
 

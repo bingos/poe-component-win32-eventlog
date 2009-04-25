@@ -1,0 +1,5 @@
+POE::Component::Win32::EventLog
+===============================
+
+1.06	Tue Sep 12 21:15:07 BST 2006
+	- Updates for CPANTS tests.
