@@ -16,7 +16,7 @@ use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.01';
+$VERSION = '1.02';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -193,7 +193,7 @@ sub _shutdown {
   }
   if ( $self->{wheel} ) {
 	  $self->{wheel}->shutdown_stdin();
-	  delete ( $self->{wheel} );
+	  #delete ( $self->{wheel} );
   }
   undef;
 }
