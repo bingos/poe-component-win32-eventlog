@@ -3,6 +3,8 @@ name 'POE-Component-Win32-EventLog';
 author 'Chris Williams <chris@bingosnet.co.uk>';
 license 'perl';
 version_from 'lib/POE/Component/Win32/EventLog.pm';
+abstract_from 'lib/POE/Component/Win32/EventLog.pm';
+build_requires 'Test::More' => 0.47;
 requires 'Carp' => 0;
 requires 'Win32' => 0;
 requires 'Win32::EventLog' => 0;

@@ -10,13 +10,13 @@ package POE::Component::Win32::EventLog;
 use strict;
 use warnings;
 
-use POE 0.31 qw(Wheel::Run Filter::Line Filter::Reference);
+use POE 0.38 qw(Wheel::Run Filter::Line Filter::Reference);
 use Win32;
 use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.08';
+$VERSION = '1.09';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -294,7 +294,7 @@ __END__
 
 =head1 NAME
 
-POE::Component::Win32::EventLog - A POE component that provides non-blocking access to L<Win32::EventLog|Win32::EventLog>.
+POE::Component::Win32::EventLog - A POE component that provides non-blocking access to Win32::EventLog.
 
 =head1 SYNOPSIS
 
