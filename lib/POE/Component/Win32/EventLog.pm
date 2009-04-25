@@ -15,8 +15,9 @@ use Win32;
 use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
+use Data::Dumper;
 
-$VERSION = '1.03';
+$VERSION = '1.04';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -43,7 +44,7 @@ sub spawn {
 	  object_states => [
 	  	$self => { 'shutdown' => '_shutdown',
 			   map { ( $_ => 'cmd_handler' ) } keys %functions },
-	  	$self => [ qw(_start child_closed child_error child_stderr child_stdout) ],
+	  	$self => [ qw(_start child_closed child_error child_stderr child_stdout flush_queue) ],
 	  ],
 	  ( ( defined ( $options ) and ref ( $options ) eq 'HASH' ) ? ( options => $options ) : () ),
   )->ID();
@@ -91,6 +92,7 @@ sub _start {
   );
 
   $self->{shutdown} = 0;
+  $self->{queuing} = 1;
   unless( $self->{wheel} ) {
 	  $kernel->yield( 'shutdown' );
   }
@@ -144,8 +146,14 @@ sub cmd_handler {
 
   $args->{sender} = $sender;
   $args->{func} = $func;
-  $kernel->refcount_increment( $sender => __PACKAGE__ );
-  $self->{wheel}->put( $args );
+  unless ( $self->{shutdown} ) {
+    if ( $self->{queuing} ) {
+	push( @{ $self->{request_queue} }, $args );
+    }
+    $kernel->refcount_increment( $args->{sender} => __PACKAGE__ );
+    $self->{wheel}->put( $args ) if ( $self->{wheel} );
+  }
+  undef;
 }
 
 sub child_closed {
@@ -171,13 +179,28 @@ sub child_stderr {
 
 sub child_stdout {
   my ($kernel,$self,$input) = @_[KERNEL,OBJECT,ARG0];
-  my ($session) = delete ( $input->{sender} );
-  my ($event) = delete ( $input->{event} );
 
-  $kernel->post( $session, $event, $input );
+  if ( ref ( $input ) eq 'HASH' ) {
+    my ($session) = delete ( $input->{sender} );
+    my ($event) = delete ( $input->{event} );
+
+    $kernel->post( $session, $event, $input );
   
-  $kernel->refcount_decrement( $session => __PACKAGE__ );
+    $kernel->refcount_decrement( $session => __PACKAGE__ );
+  } else {
+    $self->{queuing} = 0;
+    $kernel->yield( 'flush_queue' );
+  }
   undef;  
+}
+
+sub flush_queue {
+  my ($kernel,$self) = @_[KERNEL,OBJECT];
+
+  while ( my $args = shift @{ $self->{request_queue} } ) {
+       	  $kernel->refcount_decrement( $args->{sender} => __PACKAGE__ );
+  }
+  undef;
 }
 
 sub shutdown {
@@ -210,6 +233,8 @@ sub subprocess {
 
   unless ( $handle->{handle} ) { # dirty hack
 	 print STDERR "Couldn\'t create an eventlog handle for $source $system\n";
+         my $ready = $filter->put( [ [] ] );
+         print STDOUT @$ready;
 	 return;
   }
 
