@@ -1,6 +1,9 @@
 POE::Component::Win32::EventLog
 ===============================
 
+1.18	Tue Feb 26 13:50:43 GMT 2008
+	- Added eventlog test
+
 1.16	Wed Feb 20 19:16:23 GMT 2008
 	- Oops forgot to no_index 'mylib'.
 
