@@ -16,7 +16,7 @@ use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.07';
+$VERSION = '1.08';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -69,8 +69,6 @@ sub _start {
 	  $kernel->refcount_increment( $self->{session_id} => __PACKAGE__ );
   }
 
-  $kernel->sig( 'CHLD' => '_sig_chld' );
-
   $self->{wheel} = POE::Wheel::Run->new(
 	Program     => \&_subprocess,
 	ProgramArgs => [ $self->{source}, $self->{system}, $self->{dontresolveuser} ],
@@ -84,6 +82,8 @@ sub _start {
 	StderrFilter => POE::Filter::Line->new(),
 
   );
+
+  $kernel->sig_child( $self->{wheel}->PID(), '_sig_chld' );
 
   $self->{shutdown} = 0;
   $self->{queuing} = 1;
@@ -144,7 +144,6 @@ sub _cmd_handler {
 }
 
 sub _sig_chld {
-  $_[KERNEL]->sig( 'CHLD' );
   $_[KERNEL]->sig_handled();
 }
 
@@ -204,7 +203,6 @@ sub _shutdown {
   } else {
 	  $kernel->refcount_decrement( $self->{session_id} => __PACKAGE__ );
   }
-  $kernel->sig( 'CHLD' ) unless $self->{wheel};
   $self->{wheel}->shutdown_stdin() if $self->{wheel};
   $self->{shutdown} = 1;
   undef;

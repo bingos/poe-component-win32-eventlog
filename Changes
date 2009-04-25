@@ -1,6 +1,10 @@
 POE::Component::Win32::EventLog
 ===============================
 
+1.08	Sat Dec 30 08:30:09 GMT 2006
+	- Makefile.PL is now fully M::I
+	- Changed to using sig_child() semantics.
+
 1.07	Tue Sep 26 16:44:04 BST 2006
 	- Switched to Module::Install
 

@@ -1,17 +1,10 @@
-#use ExtUtils::MakeMaker;
 use inc::Module::Install;
-
+name 'POE-Component-Win32-EventLog';
 author 'Chris Williams <chris@bingosnet.co.uk>';
 license 'perl';
-
-WriteMakefile(
-			  'NAME'	=> 'POE::Component::Win32::EventLog',
-			  'PREREQ_PM' => {
-					  'POE'    => 0.31,
-					  'Win32::EventLog' => 0,
-					  'Win32' => 0,
-					  'Carp'   => 0,
-					 },
-			  'VERSION_FROM' => 'lib/POE/Component/Win32/EventLog.pm',
-			  'dist' => { 'COMPRESS' => 'gzip --best' },
-			 );
+version_from 'lib/POE/Component/Win32/EventLog.pm';
+requires 'Carp' => 0;
+requires 'Win32' => 0;
+requires 'Win32::EventLog' => 0;
+requires 'POE' => 0.38;
+WriteAll();
