@@ -16,7 +16,7 @@ use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -90,6 +90,7 @@ sub _start {
 
   );
 
+  $self->{shutdown} = 0;
   unless( $self->{wheel} ) {
 	  $kernel->yield( 'shutdown' );
   }
@@ -150,14 +151,14 @@ sub cmd_handler {
 sub child_closed {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   delete ( $self->{wheel} );
-  $kernel->yield( 'shutdown' );
+  $kernel->yield( 'shutdown' ) unless ( $self->{shutdown} );
   undef;
 }
 
 sub child_error {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
   delete ( $self->{wheel} );
-  $kernel->yield( 'shutdown' );
+  $kernel->yield( 'shutdown' ) unless ( $self->{shutdown} );
   undef;
 }
 
@@ -193,8 +194,8 @@ sub _shutdown {
   }
   if ( $self->{wheel} ) {
 	  $self->{wheel}->shutdown_stdin();
-	  #delete ( $self->{wheel} );
   }
+  $self->{shutdown} = 1;
   undef;
 }
 
