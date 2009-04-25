@@ -9,6 +9,7 @@ WriteMakefile(
 			  'PREREQ_PM' => {
 							  'POE'    => 0.31,
 							  'Win32::EventLog' => 0,
+							  'Win32' => 0,
 							  'Carp'   => 0,
 							 },
 			  'VERSION_FROM' => 'lib/POE/Component/Win32/EventLog.pm', # finds $VERSION
