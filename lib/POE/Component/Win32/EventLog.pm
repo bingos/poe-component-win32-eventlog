@@ -15,36 +15,28 @@ use Win32;
 use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
-use Data::Dumper;
 
-$VERSION = '1.04';
+$VERSION = '1.05';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
 sub spawn {
-  my ($package) = shift;
+  my $package = shift;
   croak "$package needs an even number of parameters" if @_ & 1;
   my %params = @_;
 
   $Win32::EventLog::GetMessageText = 1;
-
-  foreach my $param ( keys %params ) {
-     $params{ lc $param } = delete ( $params{ $param } );
-  }
-
-  my $options = delete ( $params{'options'} );
+  $params{ lc $_ } = delete $params{$_} for keys %params;
+  my $options = delete $params{'options'};
 
   my $self = bless \%params, $package;
-
-  unless ( $self->{source} ) {
-	  $self->{source} = 'System';
-  }
+  $self->{source} = 'System' unless $self->{source};
 
   $self->{session_id} = POE::Session->create(
 	  object_states => [
 	  	$self => { 'shutdown' => '_shutdown',
 			   map { ( $_ => 'cmd_handler' ) } keys %functions },
-	  	$self => [ qw(_start child_closed child_error child_stderr child_stdout flush_queue) ],
+	  	$self => [ qw(_start child_closed child_error child_stderr child_stdout flush_queue _sig_chld) ],
 	  ],
 	  ( ( defined ( $options ) and ref ( $options ) eq 'HASH' ) ? ( options => $options ) : () ),
   )->ID();
@@ -57,12 +49,12 @@ sub session_id {
 }
 
 sub yield {
-  my ($self) = shift;
+  my $self = shift;
   $poe_kernel->post( $self->session_id() => @_ );
 }
 
 sub call {
-  my ($self) = shift;
+  my $self = shift;
   $poe_kernel->call( $self->session_id() => @_ );
 }
 
@@ -76,6 +68,8 @@ sub _start {
   } else {
 	  $kernel->refcount_increment( $self->{session_id} => __PACKAGE__ );
   }
+
+  $kernel->sig( 'CHLD' => '_sig_chld' );
 
   $self->{wheel} = POE::Wheel::Run->new(
 	Program     => \&subprocess,
@@ -93,21 +87,16 @@ sub _start {
 
   $self->{shutdown} = 0;
   $self->{queuing} = 1;
-  unless( $self->{wheel} ) {
-	  $kernel->yield( 'shutdown' );
-  }
-
+  $kernel->yield( 'shutdown' ) unless $self->{wheel};
   undef;
 }
 
 sub cmd_handler {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
-  my ($sender) = $_[SENDER]->ID();
+  my $sender = $_[SENDER]->ID();
   my $func = $functions{ $_[STATE] };
 
-  unless ( $self->{wheel} ) { 
-	  return;
-  }
+  return unless $self->{wheel};
 
   # Get the arguments
   my $args;
@@ -121,7 +110,7 @@ sub cmd_handler {
 
   foreach my $key ( keys %{ $args } ) {
 	  next if ( $key =~ /^_/ );
-	  $args->{ lc ( $key ) } = delete ( $args->{ $key } );
+	  $args->{ lc $key } = delete $args->{ $key };
   }
   
   unless ( $args->{event} ) {
@@ -147,33 +136,35 @@ sub cmd_handler {
   $args->{sender} = $sender;
   $args->{func} = $func;
   unless ( $self->{shutdown} ) {
-    if ( $self->{queuing} ) {
-	push( @{ $self->{request_queue} }, $args );
-    }
+    push @{ $self->{request_queue} }, $args if $self->{queuing};
     $kernel->refcount_increment( $args->{sender} => __PACKAGE__ );
-    $self->{wheel}->put( $args ) if ( $self->{wheel} );
+    $self->{wheel}->put( $args ) if $self->{wheel};
   }
   undef;
 }
 
+sub _sig_chld {
+  $_[KERNEL]->sig( 'CHLD' );
+  $_[KERNEL]->sig_handled();
+}
+
 sub child_closed {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
-  delete ( $self->{wheel} );
-  $kernel->yield( 'shutdown' ) unless ( $self->{shutdown} );
+  delete $self->{wheel};
+  $kernel->yield( 'shutdown' ) unless $self->{shutdown};
   undef;
 }
 
 sub child_error {
   my ($kernel,$self) = @_[KERNEL,OBJECT];
-  delete ( $self->{wheel} );
-  $kernel->yield( 'shutdown' ) unless ( $self->{shutdown} );
+  delete $self->{wheel};
+  $kernel->yield( 'shutdown' ) unless $self->{shutdown};
   undef;
 }
 
 sub child_stderr {
   my ($kernel,$self,$input) = @_[KERNEL,OBJECT,ARG0];
-
-  warn "$input\n" if ( $self->{debug} );
+  warn "$input\n" if $self->{debug};
   undef;
 }
 
@@ -181,11 +172,9 @@ sub child_stdout {
   my ($kernel,$self,$input) = @_[KERNEL,OBJECT,ARG0];
 
   if ( ref ( $input ) eq 'HASH' ) {
-    my ($session) = delete ( $input->{sender} );
-    my ($event) = delete ( $input->{event} );
-
+    my $session = delete $input->{sender};
+    my $event = delete $input->{event};
     $kernel->post( $session, $event, $input );
-  
     $kernel->refcount_decrement( $session => __PACKAGE__ );
   } else {
     $self->{queuing} = 0;
@@ -215,9 +204,8 @@ sub _shutdown {
   } else {
 	  $kernel->refcount_decrement( $self->{session_id} => __PACKAGE__ );
   }
-  if ( $self->{wheel} ) {
-	  $self->{wheel}->shutdown_stdin();
-  }
+  $kernel->sig( 'CHLD' ) unless $self->{wheel};
+  $self->{wheel}->shutdown_stdin() if $self->{wheel};
   $self->{shutdown} = 1;
   undef;
 }
@@ -293,11 +281,9 @@ sub error_codes {
 }
 
 sub lookupaccountsid {
-  my ($sid) = shift || return '';
+  my $sid = shift || return '';
 
-  unless ($sid) {
-	return $sid;
-  } 
+  return $sid unless $sid;
   my ($account,$domain,$sidtype);
   eval {
     Win32::LookupAccountSID("",$sid,$account,$domain,$sidtype);
@@ -316,6 +302,7 @@ POE::Component::Win32::EventLog - A POE component that provides non-blocking acc
 
   use POE qw(Component::Win32::EventLog);
   use Win32::EventLog;
+  use Data::Dumper;
 
   my $eventlog = POE::Component::Win32::EventLog->spawn();
 
@@ -377,10 +364,10 @@ POE::Component::Win32::EventLog - A POE component that provides non-blocking acc
 
 =head1 DESCRIPTION
 
-POE::Component::Win32::EventLog is a L<POE|POE> component that provides a non-blocking wrapper around
-L<Win32::EventLog|Win32::EventLog>. Each component instance represents a Win32::EventLog object.
+POE::Component::Win32::EventLog is a L<POE> component that provides a non-blocking wrapper around
+L<Win32::EventLog>. Each component instance represents a Win32::EventLog object.
 
-Consult the L<Win32::EventLog|Win32::EventLog> documentation for more details.
+Consult the L<Win32::EventLog> documentation for more details.
 
 =head1 CONSTRUCTOR
 
@@ -426,7 +413,7 @@ Terminates the component instance.
 =head1 INPUT
 
 These are the events that the component will accept. All require a hashref as the first parameter. All require that
-the hashref contain the 'event' key which contains the name of the event handler in *your* session that you want the result of the requested operation to go to. If a function requires additional arguments the 'args' key can be used which must be an arrayref of values. Check with L<Win32::EventLog|Win32::EventLog> for details.
+the hashref contain the 'event' key which contains the name of the event handler in *your* session that you want the result of the requested operation to go to. If a function requires additional arguments the 'args' key can be used which must be an arrayref of values. Check with L<Win32::EventLog> for details.
 
 You may pass arbitary key/values in the hashref, please ensure that the keys begin with an underscore. See SYNOPSIS for an example.
 
@@ -471,7 +458,7 @@ For each requested operation an event handler is required. ARG0 of this event ha
 =item result
 
 For most cases this will be just a true value. For 'getnumber' and 'getoldest' it will be an integer.
-For 'read', it will be a hashref representing the eventlog record ( see L<Win32::EventLog|Win32::EventLog> for
+For 'read', it will be a hashref representing the eventlog record ( see L<Win32::EventLog> for
 details ( the component automagically resolves the User field from a SID to a 'proper' username ).
 
 =item error
@@ -490,7 +477,8 @@ Chris 'BinGOs' Williams
 
 =head1 SEE ALSO
 
-L<POE::POE>
-L<Win32::EventLog|Win32::EventLog>
+L<POE>
+
+L<Win32::EventLog>
 
 =cut
