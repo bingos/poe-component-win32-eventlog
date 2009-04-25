@@ -16,7 +16,7 @@ use Win32::EventLog;
 use Carp qw(carp croak);
 use vars qw($VERSION);
 
-$VERSION = '1.20';
+$VERSION = '1.22';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -476,6 +476,12 @@ This module will only work on Win32. But you guessed that already :)
 =head1 AUTHOR
 
 Chris 'BinGOs' Williams
+
+=head1 LICENSE
+
+Copyright C<(c)> Chris Williams.
+
+This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
