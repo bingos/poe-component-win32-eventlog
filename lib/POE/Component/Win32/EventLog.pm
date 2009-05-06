@@ -400,7 +400,7 @@ This method provides an alternative object based means of posting events to the 
 First argument is the event to post, following arguments are sent as arguments to the resultant
 post.
 
-=item c<call>
+=item C<call>
 
 This method provides an alternative object based means of calling events to the component.
 First argument is the event to call, following arguments are sent as arguments to the resultant
