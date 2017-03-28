@@ -1,5 +1,7 @@
 package POE::Component::Win32::EventLog;
 
+#ABSTRACT: A POE component that provides non-blocking access to Win32::EventLog.
+
 # Author: Chris "BinGOs" Williams
 #
 # This module may be used, modified, and distributed under the same
@@ -14,9 +16,6 @@ use POE 0.38 qw(Wheel::Run Filter::Line Filter::Reference);
 use Win32;
 use Win32::EventLog;
 use Carp qw(carp croak);
-use vars qw($VERSION);
-
-$VERSION = '1.24';
 
 our %functions = ( qw(backup Backup read Read getoldest GetOldest getnumber GetNumber clear Clear report Report) );
 
@@ -179,7 +178,7 @@ sub child_stdout {
     $self->{queuing} = 0;
     $kernel->yield( '_flush_queue' );
   }
-  undef;  
+  undef;
 }
 
 sub _flush_queue {
@@ -209,7 +208,7 @@ sub _shutdown {
 }
 
 sub _subprocess {
-  binmode(STDIN); binmode(STDOUT); 
+  binmode(STDIN); binmode(STDOUT);
   my ($source,$system,$dontresolveuser) = splice @_, 0, 3;
   my $raw;
   my $size = 4096;
@@ -290,11 +289,8 @@ sub _lookupaccountsid {
 }
 
 1;
-__END__
 
-=head1 NAME
-
-POE::Component::Win32::EventLog - A POE component that provides non-blocking access to Win32::EventLog.
+=pod
 
 =head1 SYNOPSIS
 
@@ -472,16 +468,6 @@ In the event of an error occurring this will be defined. It is an arrayref which
 =head1 CAVEATS
 
 This module will only work on Win32. But you guessed that already :)
-
-=head1 AUTHOR
-
-Chris 'BinGOs' Williams
-
-=head1 LICENSE
-
-Copyright E<copy> Chris Williams.
-
-This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
